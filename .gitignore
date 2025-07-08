@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entorno virtual
+venv/
+env/
+
+# SQLite databases (opcional, si no quieres subir los datos)
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de configuración de PyCharm, VSCode, etc.
+.idea/
+.vscode/
+
+# Archivos de usuario de Jupyter/Spyder
+.ipynb_checkpoints/
+
+# Archivos de respaldo de Google API
+token.json
+creds.json
+
+# Archivos de log o debug
+*.log
+*.bak
+*.tmp
+
+# Excel y exports (opcional)
+*.xlsx
+*.xls
+/export/
+backup_*.*
