@@ -112,12 +112,12 @@ class RegistrosWidget(QWidget):
             return
         texto = "Productos vendidos:\n"
         for prod in detalle:
-            texto += f"- {prod['nombre']} x{prod['cantidad']} @ ${prod['precio_unitario']} = ${prod['subtotal']}\n"
+            texto += f"- {prod['nombre_producto']} x{prod['cantidad']} @ ${prod['precio_unitario']} = ${prod['subtotal']}\n"
         QMessageBox.information(self, f"Detalle de Venta #{venta_id}", texto)
 
     def eliminar_venta(self, venta_id):
         res = QMessageBox.question(self, "Eliminar venta", "¿Seguro que deseas eliminar esta venta? Esto devolverá el stock.",
-                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if res == QMessageBox.Yes:
             self.db.eliminar_venta(venta_id)
             QMessageBox.information(self, "Eliminada", "Venta eliminada y stock actualizado.")
@@ -152,8 +152,8 @@ class EditarVentaDialog(QDialog):
             precio_input.setMaximum(1_000_000)
             precio_input.setValue(item['precio_unitario'])
 
-            layout.addRow(f"{item['nombre']} - Cantidad:", cantidad_input)
-            layout.addRow(f"{item['nombre']} - Precio unitario:", precio_input)
+            layout.addRow(f"{item['nombre_producto']} - Cantidad:", cantidad_input)
+            layout.addRow(f"{item['nombre_producto']} - Precio unitario:", precio_input)
 
             self.inputs.append((item['producto_id'], cantidad_input, precio_input))
 

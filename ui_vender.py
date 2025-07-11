@@ -59,6 +59,24 @@ class VenderWidget(QWidget):
         self.busqueda_input.returnPressed.connect(self.buscar_producto)
         self.tabla.cellDoubleClicked.connect(self.editar_eliminar_item)
 
+    def registrar_venta(self):
+        if not self.items_venta:
+            QMessageBox.warning(self, "Venta vacía", "Agrega productos para registrar la venta.")
+            return
+
+        # Validar stock
+        for item in self.items_venta:
+            prod = self.db.obtener_producto_por_id(item['producto_id'])
+            if item['cantidad'] > prod['cantidad']:
+                QMessageBox.warning(self, "Stock insuficiente", f"No hay suficiente stock para {prod['nombre']}.")
+                return
+
+        venta_id = self.db.registrar_venta(self.items_venta)
+        self.items_venta.clear()
+        self.actualizar_tabla()
+        QMessageBox.information(self, "¡Venta registrada!", f"Venta N° {venta_id} registrada exitosamente.")
+
+
     def buscar_producto(self):
         texto = self.busqueda_input.text().strip()
         if not texto:
@@ -196,17 +214,4 @@ class VenderWidget(QWidget):
         self.actualizar_tabla()
         dlg.accept()
 
-    def registrar_venta(self):
-        if not self.items_venta:
-            QMessageBox.warning(self, "Venta vacía", "Agrega productos para registrar la venta.")
-            return
-        # Validar stock
-        for item in self.items_venta:
-            prod = self.db.obtener_producto_por_id(item['producto_id'])
-            if item['cantidad'] > prod['cantidad']:
-                QMessageBox.warning(self, "Stock insuficiente", f"No hay suficiente stock para {prod['nombre']}.")
-                return
-        venta_id = self.db.registrar_venta(self.items_venta)
-        self.items_venta.clear()
-        self.actualizar_tabla()
-        QMessageBox.information(self, "¡Venta registrada!", f"Venta N° {venta_id} registrada exitosamente.")
+    

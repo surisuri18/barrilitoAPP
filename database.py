@@ -38,12 +38,13 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 venta_id INTEGER NOT NULL,
                 producto_id INTEGER NOT NULL,
+                nombre_producto TEXT NOT NULL,
                 cantidad INTEGER NOT NULL,
                 precio_unitario REAL NOT NULL,
                 subtotal REAL NOT NULL,
-                FOREIGN KEY (venta_id) REFERENCES ventas(id),
-                FOREIGN KEY (producto_id) REFERENCES productos(id)
-            )
+                FOREIGN KEY (venta_id) REFERENCES ventas(id)
+                -- NO hacemos referencia a productos para que no dependa del producto
+            );
         ''')
         self.conn.commit()
 
@@ -162,12 +163,22 @@ class Database:
         # 1. Cabecera venta
         cursor.execute('INSERT INTO ventas (fecha, total) VALUES (?, ?)', (fecha, total))
         venta_id = cursor.lastrowid
-        # 2. Detalle
+        # 2. Detalle y stock
         for item in items:
+            prod = self.obtener_producto_por_id(item['producto_id'])
+            nombre_producto = prod['nombre'] if prod else "Producto eliminado"
             cursor.execute('''
-                INSERT INTO detalles_venta (venta_id, producto_id, cantidad, precio_unitario, subtotal)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (venta_id, item['producto_id'], item['cantidad'], item['precio_unitario'], item['subtotal']))
+                INSERT INTO detalles_venta 
+                (venta_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                venta_id,
+                item['producto_id'],
+                nombre_producto,
+                item['cantidad'],
+                item['precio_unitario'],
+                item['subtotal']
+            ))
             # 3. Descontar stock
             cursor.execute('''
                 UPDATE productos SET cantidad = cantidad - ? WHERE id = ?
@@ -195,12 +206,11 @@ class Database:
     def obtener_detalle_venta(self, venta_id):
         cur = self.conn.cursor()
         cur.execute('''
-            SELECT dv.*, p.nombre 
-            FROM detalles_venta dv
-            JOIN productos p ON dv.producto_id = p.id
-            WHERE dv.venta_id=?
+            SELECT * FROM detalles_venta
+            WHERE venta_id = ?
         ''', (venta_id,))
         return [dict(row) for row in cur.fetchall()]
+
 
 
     # Utilidades para backup/exportar
@@ -267,18 +277,6 @@ class Database:
         cur.execute(q, params)
         ventas = [dict(row) for row in cur.fetchall()]
         return ventas
-
-
-    def obtener_detalle_venta(self, venta_id):
-        cur = self.conn.cursor()
-        cur.execute('''
-            SELECT d.*, p.nombre
-            FROM detalles_venta d
-            JOIN productos p ON d.producto_id = p.id
-            WHERE d.venta_id = ?
-        ''', (venta_id,))
-        return [dict(row) for row in cur.fetchall()]
-
 
     def close(self):
         self.conn.close()
