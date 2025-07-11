@@ -64,6 +64,77 @@ class Database:
         ''', (nombre, codigo, precio_compra, precio_venta, cantidad, producto_id))
         self.conn.commit()
 
+    def actualizar_venta(self, venta_id, items_actualizados):
+        cursor = self.conn.cursor()
+
+        # Obtener detalles actuales
+        cursor.execute("SELECT producto_id, cantidad FROM detalles_venta WHERE venta_id=?", (venta_id,))
+        detalles_anteriores = cursor.fetchall()
+
+        # Revertir stock anterior
+        for item in detalles_anteriores:
+            cursor.execute(
+                "UPDATE productos SET cantidad = cantidad + ? WHERE id = ?",
+                (item["cantidad"], item["producto_id"])
+            )
+
+        # Eliminar detalles antiguos
+        cursor.execute("DELETE FROM detalles_venta WHERE venta_id=?", (venta_id,))
+
+        total_nuevo = 0
+
+        # Insertar nuevos detalles y descontar stock
+        for item in items_actualizados:
+            subtotal = item['cantidad'] * item['precio_unitario']
+            total_nuevo += subtotal
+
+            # Insertar nuevo detalle
+            cursor.execute(
+                "INSERT INTO detalles_venta (venta_id, producto_id, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)",
+                (venta_id, item['producto_id'], item['cantidad'], item['precio_unitario'], subtotal)
+            )
+
+            # Descontar stock
+            cursor.execute(
+                "UPDATE productos SET cantidad = cantidad - ? WHERE id = ?",
+                (item['cantidad'], item['producto_id'])
+            )
+
+        # Actualizar total en cabecera
+        cursor.execute("UPDATE ventas SET total = ? WHERE id = ?", (total_nuevo, venta_id))
+
+        self.conn.commit()
+
+
+    def eliminar_venta(self, venta_id):
+        cursor = self.conn.cursor()
+
+        # Obtener detalle de la venta
+        cursor.execute("SELECT producto_id, cantidad FROM detalles_venta WHERE venta_id=?", (venta_id,))
+        detalles = cursor.fetchall()
+
+        # Devolver stock
+        for item in detalles:
+            cursor.execute(
+                "UPDATE productos SET cantidad = cantidad + ? WHERE id = ?",
+                (item["cantidad"], item["producto_id"])
+            )
+
+        # Eliminar detalles
+        cursor.execute("DELETE FROM detalles_venta WHERE venta_id=?", (venta_id,))
+        # Eliminar cabecera
+        cursor.execute("DELETE FROM ventas WHERE id=?", (venta_id,))
+
+        self.conn.commit()
+
+
+    def obtener_producto_por_codigo(self, codigo):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM productos WHERE codigo=?", (codigo,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
     def eliminar_producto(self, producto_id):
         cursor = self.conn.cursor()
         cursor.execute('DELETE FROM productos WHERE id=?', (producto_id,))
@@ -81,16 +152,6 @@ class Database:
         else:
             cursor.execute('SELECT * FROM productos ORDER BY nombre ASC')
         return cursor.fetchall()
-
-    def obtener_producto_por_codigo(self, codigo):
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT * FROM productos WHERE codigo=?', (codigo,))
-        return cursor.fetchone()
-
-    def obtener_producto_por_id(self, producto_id):
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT * FROM productos WHERE id=?', (producto_id,))
-        return cursor.fetchone()
 
     # CRUD Ventas y detalles
     def registrar_venta(self, items):
@@ -132,13 +193,15 @@ class Database:
         return cursor.fetchall()
 
     def obtener_detalle_venta(self, venta_id):
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT dv.*, p.nombre, p.codigo FROM detalles_venta dv
+        cur = self.conn.cursor()
+        cur.execute('''
+            SELECT dv.*, p.nombre 
+            FROM detalles_venta dv
             JOIN productos p ON dv.producto_id = p.id
-            WHERE dv.venta_id = ?
+            WHERE dv.venta_id=?
         ''', (venta_id,))
-        return cursor.fetchall()
+        return [dict(row) for row in cur.fetchall()]
+
 
     # Utilidades para backup/exportar
     def exportar_productos_excel(self, file_path):
@@ -153,53 +216,7 @@ class Database:
         df = pd.DataFrame(ventas, columns=ventas[0].keys() if ventas else [])
         df.to_excel(file_path, index=False)
 
-    def close(self):
-        self.conn.close()
-# database.py
-import sqlite3
-from datetime import datetime
-
-class Database:
-    def __init__(self, filename="minimarket.db"):
-        self.conn = sqlite3.connect(filename, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        self.init_db()
-
-    def init_db(self):
-        cur = self.conn.cursor()
-        # Tabla productos
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS productos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            codigo TEXT,
-            precio_compra REAL NOT NULL,
-            precio_venta REAL NOT NULL,
-            cantidad INTEGER NOT NULL
-        )""")
-        # Tabla ventas
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS ventas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha TEXT NOT NULL,
-            hora TEXT NOT NULL,
-            total REAL NOT NULL
-        )""")
-        # Detalle de venta
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS detalle_ventas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            venta_id INTEGER,
-            producto_id INTEGER,
-            nombre TEXT,
-            precio_unitario REAL,
-            cantidad INTEGER,
-            subtotal REAL,
-            FOREIGN KEY (venta_id) REFERENCES ventas(id)
-        )""")
-        self.conn.commit()
-
-    # ---- CRUD Productos ----
+     # ---- CRUD Productos ----
     def obtener_productos(self):
         cur = self.conn.cursor()
         cur.execute("SELECT * FROM productos")
@@ -233,49 +250,36 @@ class Database:
         self.conn.commit()
 
     # ---- CRUD Ventas (solo estructura, puedes completar luego) ----
-    def registrar_venta(self, total, productos):
-        now = datetime.now()
-        fecha = now.strftime("%Y-%m-%d")
-        hora = now.strftime("%H:%M:%S")
-        cur = self.conn.cursor()
-        cur.execute(
-            "INSERT INTO ventas (fecha, hora, total) VALUES (?, ?, ?)",
-            (fecha, hora, total)
-        )
-        venta_id = cur.lastrowid
-        for prod in productos:
-            cur.execute(
-                "INSERT INTO detalle_ventas (venta_id, producto_id, nombre, precio_unitario, cantidad, subtotal) VALUES (?, ?, ?, ?, ?, ?)",
-                (venta_id, prod['id'], prod['nombre'], prod['precio_venta'], prod['cantidad'], prod['precio_venta'] * prod['cantidad'])
-            )
-            # Descuenta del stock
-            cur.execute("UPDATE productos SET cantidad = cantidad - ? WHERE id = ?", (prod['cantidad'], prod['id']))
-        self.conn.commit()
-
     def obtener_ventas_filtradas(self, tipo, fecha):
-        # Filtrado por tipo: 'Día', 'Semana', 'Mes', 'Año'
         cur = self.conn.cursor()
         if tipo == "Día":
-            q = "SELECT * FROM ventas WHERE fecha=?"
+            q = "SELECT * FROM ventas WHERE date(fecha) = ?"
             params = (fecha.strftime("%Y-%m-%d"),)
         elif tipo == "Mes":
-            q = "SELECT * FROM ventas WHERE strftime('%Y-%m', fecha)=?"
+            q = "SELECT * FROM ventas WHERE strftime('%Y-%m', fecha) = ?"
             params = (fecha.strftime("%Y-%m"),)
         elif tipo == "Año":
-            q = "SELECT * FROM ventas WHERE strftime('%Y', fecha)=?"
+            q = "SELECT * FROM ventas WHERE strftime('%Y', fecha) = ?"
             params = (fecha.strftime("%Y"),)
-        else:  # Semana: últimos 7 días
+        else:  # Semana
             q = "SELECT * FROM ventas WHERE date(fecha) BETWEEN date(?) AND date(?, '+6 day')"
             params = (fecha.strftime("%Y-%m-%d"), fecha.strftime("%Y-%m-%d"))
         cur.execute(q, params)
         ventas = [dict(row) for row in cur.fetchall()]
-        # Añade id para los detalles
-        for v in ventas:
-            v['id'] = v['id']
         return ventas
+
 
     def obtener_detalle_venta(self, venta_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM detalle_ventas WHERE venta_id=?", (venta_id,))
+        cur.execute('''
+            SELECT d.*, p.nombre
+            FROM detalles_venta d
+            JOIN productos p ON d.producto_id = p.id
+            WHERE d.venta_id = ?
+        ''', (venta_id,))
         return [dict(row) for row in cur.fetchall()]
+
+
+    def close(self):
+        self.conn.close()
 

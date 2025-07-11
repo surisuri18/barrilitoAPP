@@ -29,7 +29,6 @@ class VenderWidget(QWidget):
         buscar_btn.setFixedHeight(40)
         buscar_btn.clicked.connect(self.buscar_producto)
         buscador_layout.addWidget(buscar_btn)
-
         layout.addLayout(buscador_layout)
 
         # Tabla de productos en la venta

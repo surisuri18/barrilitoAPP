@@ -38,8 +38,19 @@ class InventarioWidget(QWidget):
         self.tabla.verticalHeader().setVisible(False)
         layout.addWidget(self.tabla)
 
+        self.tabla.setColumnWidth(0, 180)  
+        self.tabla.setColumnWidth(1, 100) 
+        self.tabla.setColumnWidth(2, 250) 
+        self.tabla.setColumnWidth(3, 180)  
+        self.tabla.setColumnWidth(4, 100) 
+        self.tabla.setColumnWidth(5, 250)  
+
         self.setLayout(layout)
         self.cargar_productos()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.cargar_productos()  # Recargar productos cada vez que se muestra
 
     def cargar_productos(self):
         productos = self.db.obtener_productos()
@@ -54,14 +65,15 @@ class InventarioWidget(QWidget):
             self.tabla.setItem(i, 2, QTableWidgetItem(f"${prod['precio_compra']:,}"))
             self.tabla.setItem(i, 3, QTableWidgetItem(f"${prod['precio_venta']:,}"))
             self.tabla.setItem(i, 4, QTableWidgetItem(str(prod['cantidad'])))
+            self.tabla.setRowHeight(i, 80)
 
             # Botón editar
             btn_edit = QPushButton("Editar")
-            btn_edit.setStyleSheet("font-size: 15px; background-color: #1e88e5; color: white;")
+            btn_edit.setStyleSheet("font-size: 15px; background-color: #1e88e5; color: black;")
             btn_edit.clicked.connect(lambda checked, prod_id=prod['id']: self.abrir_editar(prod_id))
             # Botón eliminar
             btn_del = QPushButton("Eliminar")
-            btn_del.setStyleSheet("font-size: 15px; background-color: #e53935; color: white;")
+            btn_del.setStyleSheet("font-size: 15px; background-color: #e53935; color: black;")
             btn_del.clicked.connect(lambda checked, prod_id=prod['id']: self.confirmar_eliminar(prod_id))
 
             acc_layout = QHBoxLayout()
@@ -100,10 +112,18 @@ class InventarioWidget(QWidget):
 
     def confirmar_eliminar(self, prod_id):
         res = QMessageBox.question(self, "Eliminar producto", "¿Seguro que deseas eliminar este producto?",
-                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if res == QMessageBox.Yes:
             self.db.eliminar_producto(prod_id)
             self.cargar_productos()
+
+class CodigoLineEdit(QLineEdit):
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            # Ignorar EntFer enviado por el lector
+            event.ignore()
+        else:
+            super().keyPressEvent(event)
 
 class ProductoDialog(QDialog):
     def __init__(self, producto=None, parent=None):
@@ -144,6 +164,13 @@ class ProductoDialog(QDialog):
         btns.addWidget(btn_cancelar)
         layout.addRow(btns)
         self.setLayout(layout)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            # Bloquear Enter para que no cierre el diálogo
+            event.ignore()
+        else:
+            super().keyPressEvent(event)
 
     def get_data(self):
         return {
