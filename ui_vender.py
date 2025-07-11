@@ -146,6 +146,7 @@ class VenderWidget(QWidget):
                 item['cantidad'] += cantidad
                 item['subtotal'] = item['cantidad'] * item['precio_unitario']
                 self.actualizar_tabla()
+                self.busqueda_input.clear()  # <--- limpia el input aquí
                 dlg.accept()
                 return
         # Si es nuevo producto en la venta
@@ -158,7 +159,9 @@ class VenderWidget(QWidget):
             'subtotal': cantidad * prod['precio_venta']
         })
         self.actualizar_tabla()
+        self.busqueda_input.clear()  # <--- limpia el input aquí también
         dlg.accept()
+
 
     def actualizar_tabla(self):
         self.tabla.setRowCount(len(self.items_venta))
