@@ -19,8 +19,8 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nombre TEXT NOT NULL,
                 codigo TEXT,
-                precio_compra REAL NOT NULL,
-                precio_venta REAL NOT NULL,
+                precio_compra INTEGER NOT NULL,
+                precio_venta INTEGER NOT NULL,
                 cantidad INTEGER NOT NULL
             )
         ''')
@@ -29,7 +29,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS ventas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 fecha TEXT NOT NULL,
-                total REAL NOT NULL
+                total INTEGER NOT NULL
             )
         ''')
         # Tabla detalle de ventas (items de cada venta)
@@ -40,8 +40,8 @@ class Database:
                 producto_id INTEGER NOT NULL,
                 nombre_producto TEXT NOT NULL,
                 cantidad INTEGER NOT NULL,
-                precio_unitario REAL NOT NULL,
-                subtotal REAL NOT NULL,
+                precio_unitario INTEGER NOT NULL,
+                subtotal INTEGER NOT NULL,
                 FOREIGN KEY (venta_id) REFERENCES ventas(id)
                 -- NO hacemos referencia a productos para que no dependa del producto
             );

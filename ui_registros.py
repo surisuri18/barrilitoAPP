@@ -5,12 +5,21 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QDate
 from database import Database
+from datetime import timedelta
 
 class RegistrosWidget(QWidget):
     def __init__(self, db: Database, parent=None):
         super().__init__(parent)
         self.db = db
         self.init_ui()
+        # Cargar ventas con filtro por defecto: Día y fecha actual
+        self.combo_filtro.setCurrentText("Día")
+        self.date_edit.setDate(QDate.currentDate())
+        self.cargar_ventas()
+
+        # Cuando cambie filtro o fecha, recargar ventas
+        self.combo_filtro.currentTextChanged.connect(self.cargar_ventas)
+        self.date_edit.dateChanged.connect(self.cargar_ventas)
         
 
     def init_ui(self):
@@ -32,10 +41,17 @@ class RegistrosWidget(QWidget):
         filtros_layout.addWidget(self.date_edit)
 
         btn_buscar = QPushButton("Buscar")
-        btn_buscar.setStyleSheet("font-size: 18px;")
+        btn_buscar.setStyleSheet("""
+            font-size: 18px;
+            background-color: #4CAF50;      /* verde */
+            color: white;                   /* texto blanco */
+            border-radius: 10px;            /* bordes redondeados */
+            padding: 8px 16px;              /* relleno para tamaño cómodo */
+        """)
         btn_buscar.clicked.connect(self.cargar_ventas)
         filtros_layout.addWidget(btn_buscar)
         filtros_layout.addStretch()
+
 
         layout.addLayout(filtros_layout)
 
@@ -61,34 +77,59 @@ class RegistrosWidget(QWidget):
         self.tabla.setColumnWidth(1, 100)  # Total
         self.tabla.setColumnWidth(2, 400)  # Acciones
 
+        # Nueva función para calcular fechas de rango según filtro y fecha base
+    def calcular_rango_fechas(self, filtro, fecha):
+        # fecha es un datetime.date
+        if filtro == "Día":
+            fecha_desde = fecha
+            fecha_hasta = fecha
+        elif filtro == "Semana":
+            # Semana: últimos 7 días incluyendo fecha base
+            fecha_desde = fecha - timedelta(days=6)
+            fecha_hasta = fecha
+        elif filtro == "Mes":
+            # Mes: desde primer día del mes hasta fecha base
+            fecha_desde = fecha.replace(day=1)
+            fecha_hasta = fecha
+        elif filtro == "Año":
+            # Año: desde primer día del año hasta fecha base
+            fecha_desde = fecha.replace(month=1, day=1)
+            fecha_hasta = fecha
+        else:
+            fecha_desde = None
+            fecha_hasta = None
+        return fecha_desde, fecha_hasta
+
+    
     def cargar_ventas(self):
         filtro = self.combo_filtro.currentText()
-        fecha = self.date_edit.date().toPython()  # datetime.date
+        fecha_qdate = self.date_edit.date()
+        fecha = fecha_qdate.toPython()
 
-        ventas = self.db.obtener_ventas_filtradas(filtro, fecha)
+        fecha_desde, fecha_hasta = self.calcular_rango_fechas(filtro, fecha)
+
+        ventas = self.db.obtener_ventas_filtradas(fecha_desde, fecha_hasta)
         self.tabla.setRowCount(len(ventas))
-        total_vendido = 0
 
+        total_vendido = 0
         for i, venta in enumerate(ventas):
             self.tabla.setItem(i, 0, QTableWidgetItem(venta['fecha']))
             self.tabla.setItem(i, 1, QTableWidgetItem(f"${venta['total']:,}"))
-            self.tabla.setRowHeight(i, 80)  # Por ejemplo, 50 píxeles de alto
-
+            self.tabla.setRowHeight(i, 80)
 
             btn_layout = QHBoxLayout()
-            
             btn_detalle = QPushButton("Ver detalle")
             btn_detalle.setStyleSheet("background-color: green; color: black; font-size: 14px;")
             btn_detalle.clicked.connect(lambda checked, venta_id=venta['id']: self.ver_detalle_venta(venta_id))
-            
+
             btn_editar = QPushButton("Editar")
             btn_editar.setStyleSheet("background-color: orange; color: black; font-size: 14px;")
             btn_editar.clicked.connect(lambda checked, venta_id=venta['id']: self.editar_venta(venta_id))
-            
+
             btn_eliminar = QPushButton("Eliminar")
             btn_eliminar.setStyleSheet("background-color: red; color: black; font-size: 14px;")
             btn_eliminar.clicked.connect(lambda checked, venta_id=venta['id']: self.eliminar_venta(venta_id))
-            
+
             btn_layout.addWidget(btn_detalle)
             btn_layout.addWidget(btn_editar)
             btn_layout.addWidget(btn_eliminar)
@@ -98,12 +139,19 @@ class RegistrosWidget(QWidget):
             self.tabla.setCellWidget(i, 2, contenedor)
 
             total_vendido += venta['total']
-        # Dentro de cargar_ventas
-        btn_layout = QHBoxLayout()
-        btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(5)
 
-        self.total_label.setText(f"Total vendido: ${total_vendido:,}")
+        # Cambiar texto de total vendido según filtro
+        texto_total = f"Total vendido"
+        if filtro == "Día":
+            texto_total = f"Total vendido día"
+        elif filtro == "Semana":
+            texto_total = f"Total vendido semana"
+        elif filtro == "Mes":
+            texto_total = f"Total vendido mes"
+        elif filtro == "Año":
+            texto_total = f"Total vendido año"
+
+        self.total_label.setText(f"{texto_total}: ${total_vendido:,}")
 
     def ver_detalle_venta(self, venta_id):
         detalle = self.db.obtener_detalle_venta(venta_id)
@@ -134,6 +182,11 @@ class RegistrosWidget(QWidget):
             self.db.actualizar_venta(venta_id, items_actualizados)
             QMessageBox.information(self, "Editada", "Venta actualizada correctamente.")
             self.cargar_ventas()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.cargar_ventas()
+
 
 class EditarVentaDialog(QDialog):
     def __init__(self, detalle, parent=None):

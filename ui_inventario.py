@@ -136,18 +136,30 @@ class ProductoDialog(QDialog):
         self.nombre.setStyleSheet("font-size: 18px;")
         self.codigo = QLineEdit(str(producto['codigo']) if producto and producto['codigo'] else "")
         self.codigo.setStyleSheet("font-size: 18px;")
-        self.precio_compra = QDoubleSpinBox()
+        self.precio_compra = QSpinBox()
         self.precio_compra.setMaximum(1_000_000)
-        self.precio_compra.setValue(float(producto['precio_compra']) if producto else 0)
+        self.precio_compra.setMinimum(0)
+        self.precio_compra.setSpecialValueText("")
+        self.precio_compra.setValue(0)
+        self.precio_compra.setButtonSymbols(QSpinBox.NoButtons)
         self.precio_compra.setStyleSheet("font-size: 18px;")
-        self.precio_venta = QDoubleSpinBox()
+
+        self.precio_venta = QSpinBox()
         self.precio_venta.setMaximum(1_000_000)
-        self.precio_venta.setValue(float(producto['precio_venta']) if producto else 0)
+        self.precio_venta.setMinimum(0)
+        self.precio_venta.setSpecialValueText("")
+        self.precio_venta.setValue(0)
+        self.precio_venta.setButtonSymbols(QSpinBox.NoButtons)
         self.precio_venta.setStyleSheet("font-size: 18px;")
+
         self.cantidad = QSpinBox()
         self.cantidad.setMaximum(100_000)
-        self.cantidad.setValue(int(producto['cantidad']) if producto else 0)
+        self.cantidad.setMinimum(0)
+        self.cantidad.setSpecialValueText("")
+        self.cantidad.setValue(0)
+        self.cantidad.setButtonSymbols(QSpinBox.NoButtons)
         self.cantidad.setStyleSheet("font-size: 18px;")
+
 
         layout.addRow("Nombre*", self.nombre)
         layout.addRow("Código", self.codigo)
@@ -176,7 +188,7 @@ class ProductoDialog(QDialog):
         return {
             "nombre": self.nombre.text().strip(),
             "codigo": self.codigo.text().strip() or None,
-            "precio_compra": float(self.precio_compra.value()),
-            "precio_venta": float(self.precio_venta.value()),
+            "precio_compra": int(self.precio_compra.value()),
+            "precio_venta": int(self.precio_venta.value()),
             "cantidad": int(self.cantidad.value())
         }
