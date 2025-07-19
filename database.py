@@ -74,6 +74,7 @@ class Database:
 
         # Revertir stock anterior
         for item in detalles_anteriores:
+            
             cursor.execute(
                 "UPDATE productos SET cantidad = cantidad + ? WHERE id = ?",
                 (item["cantidad"], item["producto_id"])
@@ -89,10 +90,24 @@ class Database:
             subtotal = item['cantidad'] * item['precio_unitario']
             total_nuevo += subtotal
 
-            # Insertar nuevo detalle
+            # obtenemos de nuevo el nombre antes de insertar
+            prod = self.obtener_producto_por_id(item['producto_id'])
+            nombre = prod['nombre'] if prod else "Producto eliminado"
+
             cursor.execute(
-                "INSERT INTO detalles_venta (venta_id, producto_id, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)",
-                (venta_id, item['producto_id'], item['cantidad'], item['precio_unitario'], subtotal)
+                '''
+                INSERT INTO detalles_venta
+                (venta_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                venta_id,
+                item['producto_id'],
+                nombre,
+                item['cantidad'],
+                item['precio_unitario'],
+                subtotal
+                )
             )
 
             # Descontar stock
@@ -206,7 +221,12 @@ class Database:
     def obtener_detalle_venta(self, venta_id):
         cur = self.conn.cursor()
         cur.execute('''
-            SELECT * FROM detalles_venta
+            SELECT producto_id,
+                nombre_producto,
+                cantidad,
+                precio_unitario,
+                subtotal
+            FROM detalles_venta
             WHERE venta_id = ?
         ''', (venta_id,))
         return [dict(row) for row in cur.fetchall()]

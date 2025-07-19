@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from database import Database
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QMessageBox
 
 class VenderWidget(QWidget):
     def __init__(self, db: Database, parent=None):
@@ -74,7 +76,16 @@ class VenderWidget(QWidget):
         venta_id = self.db.registrar_venta(self.items_venta)
         self.items_venta.clear()
         self.actualizar_tabla()
-        QMessageBox.information(self, "¡Venta registrada!", f"Venta N° {venta_id} registrada exitosamente.")
+        # Crear un QMessageBox sin botones
+        msg = QMessageBox(self)
+        msg.setWindowTitle("¡Venta registrada!")
+        msg.setText(f"Venta N° {venta_id} registrada exitosamente.")
+        msg.setIcon(QMessageBox.Information)
+        msg.setStandardButtons(QMessageBox.NoButton)  # que no muestre ningún botón
+        msg.show()
+
+        # Programar su cierre en 1000 ms (2 segundos)
+        QTimer.singleShot(1000, msg.accept)
 
 
     def buscar_producto(self):
