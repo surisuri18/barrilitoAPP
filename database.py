@@ -227,10 +227,6 @@ class Database:
         df.to_excel(file_path, index=False)
 
      # ---- CRUD Productos ----
-    def obtener_productos(self):
-        cur = self.conn.cursor()
-        cur.execute("SELECT * FROM productos")
-        return [dict(row) for row in cur.fetchall()]
 
     def obtener_producto_por_id(self, prod_id):
         cur = self.conn.cursor()
