@@ -21,7 +21,7 @@ class Database:
                 codigo TEXT,
                 precio_compra INTEGER NOT NULL,
                 precio_venta INTEGER NOT NULL,
-                cantidad INTEGER NOT NULL
+                cantidad REAL NOT NULL
             )
         ''')
         # Tabla de ventas (cabecera)
@@ -39,7 +39,7 @@ class Database:
                 venta_id INTEGER NOT NULL,
                 producto_id INTEGER NOT NULL,
                 nombre_producto TEXT NOT NULL,
-                cantidad INTEGER NOT NULL,
+                cantidad REAL NOT NULL,
                 precio_unitario INTEGER NOT NULL,
                 subtotal INTEGER NOT NULL,
                 FOREIGN KEY (venta_id) REFERENCES ventas(id)
@@ -276,23 +276,15 @@ class Database:
         self.conn.commit()
 
     # ---- CRUD Ventas (solo estructura, puedes completar luego) ----
-    def obtener_ventas_filtradas(self, tipo, fecha):
+
+    def obtener_ventas_filtradas(self, fecha_desde, fecha_hasta):
         cur = self.conn.cursor()
-        if tipo == "Día":
-            q = "SELECT * FROM ventas WHERE date(fecha) = ?"
-            params = (fecha.strftime("%Y-%m-%d"),)
-        elif tipo == "Mes":
-            q = "SELECT * FROM ventas WHERE strftime('%Y-%m', fecha) = ?"
-            params = (fecha.strftime("%Y-%m"),)
-        elif tipo == "Año":
-            q = "SELECT * FROM ventas WHERE strftime('%Y', fecha) = ?"
-            params = (fecha.strftime("%Y"),)
-        else:  # Semana
-            q = "SELECT * FROM ventas WHERE date(fecha) BETWEEN date(?) AND date(?, '+6 day')"
-            params = (fecha.strftime("%Y-%m-%d"), fecha.strftime("%Y-%m-%d"))
+        q = "SELECT * FROM ventas WHERE datetime(fecha) BETWEEN ? AND ?"
+        params = (fecha_desde.strftime("%Y-%m-%d %H:%M:%S"), fecha_hasta.strftime("%Y-%m-%d %H:%M:%S"))
         cur.execute(q, params)
         ventas = [dict(row) for row in cur.fetchall()]
         return ventas
+
 
     def close(self):
         self.conn.close()

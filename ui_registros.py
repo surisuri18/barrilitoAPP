@@ -15,12 +15,12 @@ class RegistrosWidget(QWidget):
         # Cargar ventas con filtro por defecto: Día y fecha actual
         self.combo_filtro.setCurrentText("Día")
         self.date_edit.setDate(QDate.currentDate())
-        self.cargar_ventas()
-
+        
         # Cuando cambie filtro o fecha, recargar ventas
         self.combo_filtro.currentTextChanged.connect(self.cargar_ventas)
         self.date_edit.dateChanged.connect(self.cargar_ventas)
         
+        self.cargar_ventas()
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -79,32 +79,29 @@ class RegistrosWidget(QWidget):
 
         # Nueva función para calcular fechas de rango según filtro y fecha base
     def calcular_rango_fechas(self, filtro, fecha):
-        # fecha es un datetime.date
+        from datetime import datetime, timedelta
         if filtro == "Día":
-            fecha_desde = fecha
-            fecha_hasta = fecha
+            desde = datetime.combine(fecha, datetime.min.time())
+            hasta = datetime.combine(fecha, datetime.max.time())
         elif filtro == "Semana":
-            # Semana: últimos 7 días incluyendo fecha base
-            fecha_desde = fecha - timedelta(days=6)
-            fecha_hasta = fecha
+            desde = datetime.combine(fecha - timedelta(days=6), datetime.min.time())
+            hasta = datetime.combine(fecha, datetime.max.time())
         elif filtro == "Mes":
-            # Mes: desde primer día del mes hasta fecha base
-            fecha_desde = fecha.replace(day=1)
-            fecha_hasta = fecha
+            desde = datetime.combine(fecha.replace(day=1), datetime.min.time())
+            hasta = datetime.combine(fecha, datetime.max.time())
         elif filtro == "Año":
-            # Año: desde primer día del año hasta fecha base
-            fecha_desde = fecha.replace(month=1, day=1)
-            fecha_hasta = fecha
+            desde = datetime.combine(fecha.replace(month=1, day=1), datetime.min.time())
+            hasta = datetime.combine(fecha, datetime.max.time())
         else:
-            fecha_desde = None
-            fecha_hasta = None
-        return fecha_desde, fecha_hasta
+            desde = hasta = None
+        return desde, hasta
 
     
     def cargar_ventas(self):
+        from datetime import datetime
         filtro = self.combo_filtro.currentText()
         fecha_qdate = self.date_edit.date()
-        fecha = fecha_qdate.toPython()
+        fecha = datetime.combine(fecha_qdate.toPython(), datetime.min.time())
 
         fecha_desde, fecha_hasta = self.calcular_rango_fechas(filtro, fecha)
 

@@ -7,8 +7,10 @@ from PySide6.QtCore import Qt
 from database import Database
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox
-
+from PySide6.QtWidgets import QDoubleSpinBox
 class VenderWidget(QWidget):
+    
+
     def __init__(self, db: Database, parent=None):
         super().__init__(parent)
         self.db = db
@@ -69,7 +71,7 @@ class VenderWidget(QWidget):
         # Validar stock
         for item in self.items_venta:
             prod = self.db.obtener_producto_por_id(item['producto_id'])
-            if item['cantidad'] > prod['cantidad']:
+            if round(item['cantidad'], 3) > round(prod['cantidad'], 3):
                 QMessageBox.warning(self, "Stock insuficiente", f"No hay suficiente stock para {prod['nombre']}.")
                 return
 
@@ -109,6 +111,7 @@ class VenderWidget(QWidget):
             self.popup_elegir_producto(resultados)
 
     def popup_cantidad(self, prod):
+        from PySide6.QtWidgets import QDoubleSpinBox  
         dlg = QDialog(self)
         dlg.setWindowTitle(f"¿Cantidad a vender? — {prod['nombre']}")
         dlg.setModal(True)
@@ -116,10 +119,12 @@ class VenderWidget(QWidget):
         lbl = QLabel(f"Producto: {prod['nombre']}\nStock disponible: {prod['cantidad']}\nPrecio: ${prod['precio_venta']}")
         lbl.setStyleSheet("font-size: 20px;")
         layout.addWidget(lbl)
-        spin = QSpinBox()
-        spin.setMinimum(1)
+        spin = QDoubleSpinBox()
+        spin.setDecimals(3)
+        spin.setSingleStep(0.1)
+        spin.setMinimum(0.001)
         spin.setMaximum(prod['cantidad'])
-        spin.setValue(1)
+        spin.setValue(0.0)
         spin.setStyleSheet("font-size: 24px;")
         layout.addWidget(spin)
         btn_layout = QHBoxLayout()
@@ -180,7 +185,7 @@ class VenderWidget(QWidget):
             self.tabla.setItem(i, 0, QTableWidgetItem(str(item['nombre'])))
             self.tabla.setItem(i, 1, QTableWidgetItem(str(item['codigo'])))
             self.tabla.setItem(i, 2, QTableWidgetItem(f"${item['precio_unitario']}"))
-            self.tabla.setItem(i, 3, QTableWidgetItem(str(item['cantidad'])))
+            self.tabla.setItem(i, 3, QTableWidgetItem(f"{item['cantidad']:.3f}"))
             self.tabla.setItem(i, 4, QTableWidgetItem(f"${item['subtotal']}"))
         total = sum(item['subtotal'] for item in self.items_venta)
         self.total_label.setText(f"TOTAL: ${total:,}")
@@ -193,10 +198,13 @@ class VenderWidget(QWidget):
         lbl = QLabel(f"Producto: {item['nombre']}\nCantidad actual: {item['cantidad']}")
         lbl.setStyleSheet("font-size: 20px;")
         layout.addWidget(lbl)
-        spin = QSpinBox()
-        spin.setMinimum(1)
-        spin.setMaximum(9999)
-        spin.setValue(item['cantidad'])
+        spin = QDoubleSpinBox()
+        spin.setDecimals(3)
+        spin.setSingleStep(0.1)
+        spin.setMinimum(0.001)
+        spin.setMaximum(99999)
+        spin.setValue(float(item['cantidad']))
+
         spin.setStyleSheet("font-size: 24px;")
         layout.addWidget(spin)
         btn_layout = QHBoxLayout()

@@ -152,12 +152,15 @@ class ProductoDialog(QDialog):
         self.precio_venta.setButtonSymbols(QSpinBox.NoButtons)
         self.precio_venta.setStyleSheet("font-size: 18px;")
 
-        self.cantidad = QSpinBox()
-        self.cantidad.setMaximum(100_000)
+        self.cantidad = QDoubleSpinBox()
+        self.cantidad.setDecimals(3)  # Para permitir hasta miligramos (0.001 kg)
+        self.cantidad.setSingleStep(0.1)
+        self.cantidad.setMaximum(100_000.0)
         self.cantidad.setSpecialValueText("")
-        self.cantidad.setValue(int(producto['cantidad']) if producto else 0)
-        self.cantidad.setButtonSymbols(QSpinBox.NoButtons)
+        self.cantidad.setValue(float(producto['cantidad']) if producto else 0.0)
+        self.cantidad.setButtonSymbols(QDoubleSpinBox.NoButtons)
         self.cantidad.setStyleSheet("font-size: 18px;")
+
 
 
         layout.addRow("Nombre*", self.nombre)
@@ -189,5 +192,5 @@ class ProductoDialog(QDialog):
             "codigo": self.codigo.text().strip() or None,
             "precio_compra": int(self.precio_compra.value()),
             "precio_venta": int(self.precio_venta.value()),
-            "cantidad": int(self.cantidad.value())
+            "cantidad": float(self.cantidad.value())
         }
