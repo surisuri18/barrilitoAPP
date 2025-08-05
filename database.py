@@ -2,7 +2,21 @@
 import sqlite3
 from datetime import datetime
 
-DB_FILE = "minimarket.db"
+
+import sys
+import os
+
+def get_db_path(filename):
+    if getattr(sys, 'frozen', False):
+        # Ejecutable creado por PyInstaller
+        base_path = sys._MEIPASS
+    else:
+        # Ejecución en desarrollo
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, filename)
+
+
+DB_FILE = get_db_path("minimarket.db")
 
 class Database:
     def __init__(self, db_file=DB_FILE):
